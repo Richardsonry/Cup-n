@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cupón</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--muted:#6e6e73;--line:#d2d2d7;--blue:#0071e3;--blue-h:#0077ed;--shadow:rgba(0,0,0,.12);
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:#1c1c1e;--text:#f5f5f7;--muted:#a1a1a6;--line:#424245;--blue:#2997ff;--blue-h:#47a6ff;--shadow:rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--text:#f5f5f7;--muted:#a1a1a6;--line:#424245;--blue:#2997ff;--blue-h:#47a6ff;--shadow:rgba(0,0,0,.6)}
+html{height:100%}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;display:grid;place-items:center;padding:24px;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.page{width:100%;max-width:760px}
+.wrap{filter:drop-shadow(0 14px 30px var(--shadow));color:var(--text)}
+.coupon{--r:14px;--split:230px;--h:310px;display:grid;grid-template-columns:1fr var(--split);background:var(--card);border-radius:28px;
+  -webkit-mask:radial-gradient(circle var(--r) at calc(100% - var(--split)) 0,#0000 98%,#000),radial-gradient(circle var(--r) at calc(100% - var(--split)) 100%,#0000 98%,#000);
+  -webkit-mask-composite:source-in;
+  mask:radial-gradient(circle var(--r) at calc(100% - var(--split)) 0,#0000 98%,#000) intersect,radial-gradient(circle var(--r) at calc(100% - var(--split)) 100%,#0000 98%,#000);
+  mask-composite:intersect}
+.main{padding:40px 40px 36px}
+.kicker{font-size:15px;font-weight:600;color:var(--muted);letter-spacing:-.01em}
+h2{margin:10px 0 0;font-size:clamp(44px,10vw,68px);line-height:1;font-weight:700;letter-spacing:-.045em;padding-bottom:.06em;overflow-wrap:anywhere;
+  background:linear-gradient(120deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.txt{margin:14px 0 0;color:var(--muted);font-size:17px;line-height:1.47;letter-spacing:-.022em;max-width:32ch;white-space:pre-line}
+.who{margin:18px 0 0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.stub{position:relative;padding:28px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.stub::before{content:"";position:absolute;left:0;top:26px;bottom:26px;border-left:2px dashed var(--line)}
+.emoji{font-size:76px;line-height:1}
+.emoji:empty{display:none}
+.info{display:flex;flex-direction:column;gap:2px}
+.lbl{font-size:12px;color:var(--muted);letter-spacing:-.01em}
+.val{font-size:14px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.val:last-child{margin-bottom:0}
+button{appearance:none;border:0;cursor:pointer;font:inherit;font-size:17px;letter-spacing:-.022em;color:var(--btnt,#fff);background:var(--btn,var(--blue));padding:12px 22px;border-radius:980px;transition:background .2s,transform .15s}
+button:hover{background:var(--btn,var(--blue-h));filter:brightness(1.08)}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.6;cursor:default}
+button:focus-visible{outline:4px solid color-mix(in srgb,var(--blue) 45%,transparent);outline-offset:2px}
+.stub button{width:100%;margin-top:4px}
+@media (max-width:640px){
+  body{padding:20px 16px}
+  .coupon{--split:0px;grid-template-columns:1fr;
+    -webkit-mask:radial-gradient(circle var(--r) at 0 calc(100% - var(--h)),#0000 98%,#000),radial-gradient(circle var(--r) at 100% calc(100% - var(--h)),#0000 98%,#000);
+    -webkit-mask-composite:source-in;
+    mask:radial-gradient(circle var(--r) at 0 calc(100% - var(--h)),#0000 98%,#000) intersect,radial-gradient(circle var(--r) at 100% calc(100% - var(--h)),#0000 98%,#000);mask-composite:intersect}
+  .main{padding:32px 28px 24px}
+  .stub{min-height:var(--h);padding:24px 28px}
+  .stub::before{left:26px;right:26px;top:0;bottom:auto;border-left:0;border-top:2px dashed var(--line)}
+  .stub button{max-width:320px}
+}
+@media (prefers-reduced-motion:reduce){button{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="wrap" id="wrap">
+    <article class="coupon" aria-label="Cupón">
+      <section class="main">
+        <div class="kicker" id="vKicker"></div>
+        <h2 id="vTitulo"></h2>
+        <p class="txt" id="vTexto"></p>
+        <p class="who" id="vWho"></p>
+      </section>
+      <aside class="stub">
+        <div class="emoji" id="vEmoji" aria-hidden="true"></div>
+        <div class="info">
+          <div class="lbl">Válido</div><div class="val" id="vValid"></div>
+          <div class="lbl">Generado el</div><div class="val" id="vFecha"></div>
+        </div>
+        <button type="button" id="guardar">Guardar</button>
+      </aside>
+    </article>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const COLORES = [["#0a84ff","#bf5af2"],["#ff375f","#ff9f0a"],["#bf5af2","#ff375f"],["#30b0c7","#0a84ff"],["#30d158","#30b0c7"],["#ff9f0a","#ffd60a"]];
+const FONT = '-apple-system, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
+const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+
+/* Datos: #d=Nombre|Validez|Mensaje|Para|De|TextoPequeño|Emoji|Degradado(0-5)|ColorFondo|ColorTítulo */
+const NOMBRES = {rojo:"#ff3b30",naranja:"#ff9500",amarillo:"#ffcc00",verde:"#34c759",turquesa:"#30b0c7",azul:"#0a84ff",morado:"#af52de",violeta:"#af52de",rosa:"#ff6b9d",rosado:"#ff6b9d",negro:"#000000",blanco:"#ffffff",gris:"#8e8e93",beige:"#f5ecd9",crema:"#fff8e7",dorado:"#d4a017",marino:"#0b1f3a",vino:"#7b1e3a"};
+const _cx = document.createElement("canvas").getContext("2d");
+function parseColor(v){
+  v = (v || "").trim().toLowerCase(); if (!v) return null;
+  if (NOMBRES[v]) return NOMBRES[v];
+  if (/^([0-9a-f]{3}|[0-9a-f]{6})$/.test(v)) v = "#" + v;
+  _cx.fillStyle = "#000"; _cx.fillStyle = v; const a = _cx.fillStyle;
+  _cx.fillStyle = "#fff"; _cx.fillStyle = v; const b = _cx.fillStyle;
+  return a === b ? a : null;
+}
+function esOscuro(hex){
+  _cx.fillStyle = hex; const h = _cx.fillStyle;
+  const r = parseInt(h.slice(1,3),16), g = parseInt(h.slice(3,5),16), b = parseInt(h.slice(5,7),16);
+  return (0.299*r + 0.587*g + 0.114*b) < 140;
+}
+const raw = new URLSearchParams(location.hash.slice(1)).get("d");
+let c;
+if (raw){
+  const p = raw.split("|").map(s => s.trim());
+  const ci = parseInt(p[7], 10);
+  c = {titulo:p[0], valid:p[1], texto:p[2], para:p[3], de:p[4], kicker:p[5] || "Cupón", icono:p[6] || "", color:COLORES[ci] ? ci : 0, fondo:parseColor(p[8]), tcolor:parseColor(p[9])};
+} else {
+  c = {titulo:"Cena", valid:"Sin fecha de vencimiento", texto:"En un restaurante o en casa. Tú decides, yo invito.", para:"Mi amor", de:"Tu nombre", kicker:"Cupón para una", icono:"🍷", color:1, fondo:null, tcolor:null};
+}
+/* Tema: si hay color de fondo, los textos se ajustan solos para que se lean */
+const LIGHT = {card:"#ffffff", text:"#1d1d1f", muted:"#6e6e73", line:"#d2d2d7"};
+const DARK  = {card:"#1c1c1e", text:"#f5f5f7", muted:"#a1a1a6", line:"#424245"};
+let PDFT = LIGHT;
+if (c.fondo){
+  PDFT = Object.assign({}, esOscuro(c.fondo) ? DARK : LIGHT, {card:c.fondo});
+  if (esOscuro(c.fondo)) PDFT.line = "#5a5a5e";
+}
+const hoy = new Date().toLocaleDateString("es", {day:"numeric", month:"short", year:"numeric"});
+const who = [c.para && "Para " + c.para, c.de && "de " + c.de].filter(Boolean).join(", ");
+
+$("vKicker").textContent = c.kicker;
+$("vTitulo").textContent = c.titulo || "Cupón";
+$("vTexto").textContent = c.texto || "";
+$("vWho").textContent = who; $("vWho").hidden = !who;
+$("vEmoji").textContent = c.icono;
+$("wrap").style.setProperty("--a", COLORES[c.color][0]);
+$("wrap").style.setProperty("--b", COLORES[c.color][1]);
+if (c.fondo){
+  const w = $("wrap");
+  w.style.setProperty("--card", PDFT.card); w.style.setProperty("--text", PDFT.text);
+  w.style.setProperty("--muted", PDFT.muted); w.style.setProperty("--line", PDFT.line);
+  w.style.setProperty("--btn", PDFT.text); w.style.setProperty("--btnt", PDFT.card);
+}
+if (c.tcolor){ const h = $("vTitulo"); h.style.background = "none"; h.style.color = c.tcolor; }
+$("vValid").textContent = c.valid || "—";
+$("vFecha").textContent = hoy;
+document.title = "Cupón " + (c.titulo || "");
+
+/* ---------- PDF: se dibuja el cupón (siempre en claro) y se guarda como PDF ---------- */
+function rr(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function wrap(ctx, text, max){
+  const out = [];
+  String(text).split("\n").forEach(par => {
+    let line = "";
+    par.split(" ").forEach(w => {
+      const t = line ? line + " " + w : w;
+      if (ctx.measureText(t).width > max && line){ out.push(line); line = w; } else line = t;
+    });
+    out.push(line);
+  });
+  return out;
+}
+function fit(ctx, text, max, size, weight, min){
+  let s = size;
+  ctx.font = `${weight} ${s}px ${FONT}`;
+  while (ctx.measureText(text).width > max && s > min){ s -= 2; ctx.font = `${weight} ${s}px ${FONT}`; }
+  return s;
+}
+function dibujar(){
+  const S = 3, PAD = 40, W = 760, SPLIT = 230, LEFT = 40, MAXW = W - SPLIT - LEFT - 30;
+  const m = document.createElement("canvas").getContext("2d");
+  m.font = `400 17px ${FONT}`;
+  const lines = c.texto ? wrap(m, c.texto, Math.min(400, MAXW)) : [];
+  let y = 126;
+  if (lines.length) y = 170 + (lines.length - 1) * 25;
+  const whoY = y + 38;
+  const H = Math.max(340, (who ? whoY : y) + 44);
+
+  const card = document.createElement("canvas");
+  card.width = W * S; card.height = H * S;
+  const g = card.getContext("2d");
+  g.scale(S, S);
+  g.fillStyle = PDFT.card; rr(g, 0, 0, W, H, 28); g.fill();
+  g.globalCompositeOperation = "destination-out";
+  [0, H].forEach(cy => { g.beginPath(); g.arc(W - SPLIT, cy, 14, 0, Math.PI * 2); g.fill(); });
+  g.globalCompositeOperation = "source-over";
+
+  g.setLineDash([6, 6]); g.strokeStyle = PDFT.line; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(W - SPLIT, 28); g.lineTo(W - SPLIT, H - 28); g.stroke(); g.setLineDash([]);
+
+  g.textAlign = "left"; g.textBaseline = "alphabetic";
+  g.fillStyle = PDFT.muted; g.font = `600 15px ${FONT}`; g.fillText(c.kicker, LEFT, 56);
+
+  const titulo = c.titulo || "Cupón";
+  const ts = fit(g, titulo, MAXW, 68, 700, 28);
+  if ("letterSpacing" in g) g.letterSpacing = "-3px";
+  const tw = g.measureText(titulo).width;
+  const gr = g.createLinearGradient(LEFT, 0, LEFT + Math.max(tw, 1), 0);
+  gr.addColorStop(0, COLORES[c.color][0]); gr.addColorStop(1, COLORES[c.color][1]);
+  g.fillStyle = c.tcolor || gr; g.fillText(titulo, LEFT, 126);
+  if ("letterSpacing" in g) g.letterSpacing = "0px";
+
+  g.fillStyle = PDFT.muted; g.font = `400 17px ${FONT}`;
+  lines.forEach((l, i) => g.fillText(l, LEFT, 170 + i * 25));
+  if (who){ g.fillStyle = PDFT.text; g.font = `600 15px ${FONT}`; g.fillText(who, LEFT, whoY); }
+
+  const cx = W - SPLIT / 2, cy = H / 2;
+  g.textAlign = "center";
+  if (c.icono){ g.font = `84px ${EMOJI_FONT}`; g.textBaseline = "middle"; g.fillStyle = "#000"; g.fillText(c.icono, cx, cy - 40); g.textBaseline = "alphabetic"; }
+  const base = c.icono ? cy + 40 : cy - 30;
+  g.fillStyle = PDFT.muted; g.font = `400 12px ${FONT}`; g.fillText("Válido", cx, base);
+  g.fillStyle = PDFT.text; fit(g, c.valid || "—", SPLIT - 48, 14, 600, 10); g.fillText(c.valid || "—", cx, base + 20);
+  g.fillStyle = PDFT.muted; g.font = `400 12px ${FONT}`; g.fillText("Generado el", cx, base + 48);
+  g.fillStyle = PDFT.text; g.font = `600 14px ${FONT}`; g.fillText(hoy, cx, base + 68);
+
+  const out = document.createElement("canvas");
+  out.width = (W + PAD * 2) * S; out.height = (H + PAD * 2) * S;
+  const o = out.getContext("2d");
+  o.fillStyle = "#f5f5f7"; o.fillRect(0, 0, out.width, out.height);
+  o.shadowColor = "rgba(0,0,0,.14)"; o.shadowBlur = 30 * S; o.shadowOffsetY = 14 * S;
+  o.drawImage(card, PAD * S, PAD * S, W * S, H * S);
+  return {canvas: out, w: W + PAD * 2, h: H + PAD * 2};
+}
+
+function descargar(blob, nombre){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+$("guardar").onclick = async () => {
+  const btn = $("guardar");
+  if (!window.jspdf){ alert("No se pudo preparar el PDF. Revisa tu conexión a internet e inténtalo otra vez."); return; }
+  btn.disabled = true;
+  try{
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const {canvas, w, h} = dibujar();
+    const pdf = new window.jspdf.jsPDF({orientation: "landscape", unit: "pt", format: [w, h]});
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
+    const nombre = ("Cupón " + (c.titulo || "")).trim().replace(/[\\/:*?"<>|]+/g, "") + ".pdf";
+    const blob = pdf.output("blob");
+    const file = new File([blob], nombre, {type: "application/pdf"});
+    if (navigator.canShare && navigator.canShare({files: [file]})){
+      try{ await navigator.share({files: [file], title: nombre}); }
+      catch(e){ if (e.name !== "AbortError") descargar(blob, nombre); }
+    } else {
+      descargar(blob, nombre);
+    }
+  }catch(e){
+    alert("No se pudo guardar el PDF.");
+  }
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>
