@@ -132,7 +132,7 @@ const fmtH=h=>{if(!h)return "";const [a,b]=h.split(":").map(Number);return new D
 const mq=matchMedia("(max-width:640px)"), reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
 
 /* ---------- pintar ---------- */
-(function(){
+function paint(){
   const d=dark(S.card), w=wrap.style;
   w.setProperty("--card",S.card); w.setProperty("--text",d?"#ffffff":"#1d1d1f");
   w.setProperty("--muted",d?"rgba(255,255,255,.66)":"rgba(29,29,31,.62)");
@@ -145,8 +145,9 @@ const mq=matchMedia("(max-width:640px)"), reduce=matchMedia("(prefers-reduced-mo
   $("terms").textContent=S.terms; $("terms").hidden=!S.terms;
   $("dl").textContent=S.mode==="valido"?"Válido":"Fecha de vencimiento";
   $("dv").textContent=fmt(S.fecha)||"Sin fecha"; $("dh").textContent=fmtH(S.hora); $("dh").hidden=!S.hora;
+  $("qr").innerHTML="";
   try{ new QRCode($("qr"),{text:QR_URL,width:300,height:300,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
-})();
+}
 let measured=false;
 function measure(){
   if(done) return;
@@ -241,6 +242,10 @@ save.onclick=()=>{
 };
 
 setP(0);
+// Lee config.json (el que descargas del cupón 1). Si no existe, usa los valores de arriba.
+fetch("config.json?v="+Date.now(),{cache:"no-store"})
+  .then(r=>r.ok?r.json():{}).catch(()=>({}))
+  .then(c=>{Object.assign(S,c);paint()});
 </script>
 </body>
 </html>
