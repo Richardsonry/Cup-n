@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cupón</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --panel:#fff;--field:#f5f5f7;--pt:#1d1d1f;--pm:#6e6e73;--pl:#d2d2d7;--blue:#0071e3;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--panel:#1c1c1e;--field:#2c2c2e;--pt:#f5f5f7;--pm:#a1a1a6;--pl:#48484a;--blue:#2997ff}}
+:root[data-theme="dark"]{--panel:#1c1c1e;--field:#2c2c2e;--pt:#f5f5f7;--pm:#a1a1a6;--pl:#48484a;--blue:#2997ff}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;min-height:100%}
+body{color:var(--pt);-webkit-font-smoothing:antialiased;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue","Segoe UI",Roboto,Arial,sans-serif}
+.stage{--hintc:#6e6e73;position:relative;overflow:hidden;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:64px 24px 40px}
+.stage[data-mode=edit]{justify-content:flex-start}
+.stage[data-mode=edit] .edit{display:none}
+.stage[data-mode=coupon] .editor{display:none}
+.wrap{width:fit-content;max-width:100%;filter:drop-shadow(0 18px 36px rgba(0,0,0,.22))}
+
+/* cupón: una sola pieza con muescas y perforación fina */
+.coupon{--r:12px;--split:250px;--h:300px;--pitch:12px;display:flex;background:var(--card);border-radius:28px;
+  --n1:radial-gradient(circle var(--r) at calc(100% - var(--split)) 0,#0000 98%,#000);
+  --n2:radial-gradient(circle var(--r) at calc(100% - var(--split)) 100%,#0000 98%,#000);
+  --hl:radial-gradient(circle 3px at calc(100% - var(--split)) 50%,#0000 98%,#000) 0 12px/100% var(--pitch) repeat-y;
+  -webkit-mask:var(--n1),var(--n2),var(--hl);mask:var(--n1),var(--n2),var(--hl);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+.main{width:520px;flex:1 1 auto;min-width:0;padding:40px 44px 36px}
+.stub{width:var(--split);flex:none;padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
+
+.kicker{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:-.01em}
+.kicker i{width:11px;height:11px;flex:none;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b))}
+h2{margin:10px 0 0;font-size:clamp(44px,9vw,64px);line-height:1.12;font-weight:700;letter-spacing:-.04em;padding-bottom:.18em;margin-bottom:-.06em;overflow-wrap:anywhere;
+  background:linear-gradient(120deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+.txt{margin:10px 0 0;color:var(--muted);font-size:17px;line-height:1.45;letter-spacing:-.022em;max-width:34ch}
+.who{margin:16px 0 0;font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.terms{margin:10px -22px 0 0;font-size:12.5px;line-height:1.45;color:var(--muted);white-space:pre-line}
+.qrwrap{--qrs:130px;width:calc(var(--qrs) + 20px);height:calc(var(--qrs) + 20px);padding:10px;border-radius:16px;background:#fff;display:grid;place-items:center}
+#qr img,#qr canvas{display:block;width:var(--qrs);height:var(--qrs)}
+.dl{font-size:13px;color:var(--muted);letter-spacing:-.01em}
+.dv{margin-top:2px;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.dh{margin-top:1px;font-size:15px;color:var(--muted)}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.save,.primary{appearance:none;border:0;border-radius:980px;letter-spacing:-.022em;transition:transform .15s,opacity .2s}
+.save{padding:10px 26px;font-size:15px;background:var(--text);color:var(--on)}
+.primary{margin-top:28px;width:100%;padding:14px 22px;font-size:17px;background:var(--blue);color:#fff}
+.save:active,.primary:active{transform:scale(.97)}
+:is(button,input,textarea):focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.edit{position:absolute;top:16px;left:16px;padding:8px 16px;border-radius:980px;font-size:15px;color:var(--hintc);background:none;border:1px solid color-mix(in srgb,var(--hintc) 40%,transparent)}
+
+.cfgbox{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.cfgbox p{margin:0;max-width:36ch;font-size:13px;line-height:1.4;color:var(--hintc)}
+.ghost{appearance:none;background:none;border:1px solid color-mix(in srgb,var(--hintc) 45%,transparent);color:var(--hintc);border-radius:980px;padding:10px 22px;font-size:15px}
+.stage[data-mode=edit] .cfgbox{display:none}
+
+/* editor */
+.editor{width:100%;max-width:640px;background:var(--panel);border-radius:28px;padding:32px;box-shadow:0 1px 0 var(--pl)}
+.editor h3{margin:0 0 22px;font-size:26px;font-weight:700;letter-spacing:-.03em}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 16px}
+.full{grid-column:1/-1}
+label,.lab{display:block;font-size:13px;color:var(--pm);margin-bottom:8px}
+input,textarea{width:100%;font:inherit;font-size:17px;color:var(--pt);background:var(--field);border:1px solid var(--pl);border-radius:12px;padding:11px 14px;letter-spacing:-.022em}
+textarea{resize:vertical;line-height:1.4}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:34px;height:34px;padding:0;border-radius:50%;border:0;box-shadow:0 0 0 1px var(--pl) inset}
+.sw[aria-pressed=true]{box-shadow:0 0 0 3px var(--panel),0 0 0 5px var(--blue)}
+.seg{display:flex;background:var(--field);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;color:var(--pt);padding:9px 8px;border-radius:9px;font-size:15px}
+.seg button[aria-pressed=true]{background:var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.2);font-weight:600}
+
+@media (max-width:640px){
+  .stage{padding:60px 16px 32px}
+  .wrap{width:100%;max-width:440px}
+  .coupon{flex-direction:column;
+    --n1:radial-gradient(circle var(--r) at 0 calc(100% - var(--h)),#0000 98%,#000);
+    --n2:radial-gradient(circle var(--r) at 100% calc(100% - var(--h)),#0000 98%,#000);
+    --hl:radial-gradient(circle 3px at 50% calc(100% - var(--h)),#0000 98%,#000) 12px 0/var(--pitch) 100% repeat-x}
+  .main{width:auto;padding:32px 26px 28px}
+  .stub{width:auto;padding:24px;gap:14px}
+  .qrwrap{--qrs:112px}
+  .grid{grid-template-columns:1fr}.editor{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<main class="stage" id="stage" data-mode="edit">
+  <button class="edit" id="edit" type="button">‹ Editar</button>
+  <div class="wrap" id="wrap">
+    <article class="coupon" id="coupon" aria-label="Cupón">
+      <section class="main">
+        <div class="kicker"><i></i><span id="kicker"></span></div>
+        <h2 id="titulo"></h2>
+        <p class="txt" id="texto"></p>
+        <p class="who" id="who"></p>
+        <p class="terms" id="terms"></p>
+      </section>
+      <aside class="stub" id="stub">
+        <div class="qrwrap"><div id="qr"></div></div>
+        <div><div class="dl" id="dl"></div><div class="dv" id="dv"></div><div class="dh" id="dh"></div></div>
+        <button class="save" id="save" type="button">Guardar</button>
+      </aside>
+    </article>
+  </div>
+
+  <div class="cfgbox">
+    <button class="ghost" id="cfg" type="button">Descargar config.json</button>
+    <p>Sube este archivo a tu GitHub, junto al index.html, para que el cupón de canje quede igual.</p>
+  </div>
+
+  <section class="editor" id="editor">
+    <h3>Diseña tu cupón</h3>
+    <div class="grid">
+      <div class="full"><span class="lab">Color del cupón</span><div class="row" id="cardSw"></div></div>
+      <div class="full"><span class="lab">Color detrás del cupón</span><div class="seg" id="bgSeg"></div></div>
+      <div><label for="f-titulo">Título</label><input id="f-titulo" maxlength="24"></div>
+      <div><label for="f-kicker">Texto pequeño</label><input id="f-kicker" maxlength="32"></div>
+      <div class="full"><span class="lab">Degradado del título y del círculo</span><div class="row" id="gradSw"></div></div>
+      <div class="full"><label for="f-texto">Texto bajo el título</label><textarea id="f-texto" rows="2"></textarea></div>
+      <div class="full"><label for="f-para">Para</label><input id="f-para" maxlength="40"></div>
+      <div class="full"><label for="f-terms">Términos y condiciones</label><textarea id="f-terms" rows="3"></textarea></div>
+      <div class="full"><span class="lab">Tipo de fecha</span><div class="seg" id="modeSeg"></div></div>
+      <div><label for="f-fecha">Fecha</label><input type="date" id="f-fecha"></div>
+      <div><label for="f-hora">Hora</label><input type="time" id="f-hora"></div>
+    </div>
+    <button class="primary" id="create" type="button">Crear cupón</button>
+  </section>
+</main>
+
+<script>
+const QR_URL = "https://richardsonry.github.io/Cup-n/";
+const $ = id => document.getElementById(id);
+const stage=$("stage"), wrap=$("wrap"), coupon=$("coupon"), stub=$("stub");
+
+const CARDS=[["Blanco","#ffffff"],["Hueso","#f5f5f7"],["Gris","#e5e5ea"],["Plata","#c7c7cc"],["Grafito","#2c2c2e"],["Negro","#000000"],
+  ["Azul","#0a84ff"],["Índigo","#5e5ce6"],["Violeta","#bf5af2"],["Rosa","#ff375f"],["Rojo","#ff453a"],["Naranja","#ff9f0a"],
+  ["Amarillo","#ffd60a"],["Verde","#30d158"],["Menta","#66d4cf"],["Turquesa","#40c8e0"],["Cielo","#64d2ff"],["Café","#ac8e68"]];
+const GRADS=[["#0a84ff","#bf5af2"],["#ff375f","#ff9f0a"],["#bf5af2","#ff375f"],["#30b0c7","#0a84ff"],["#30d158","#30b0c7"],["#ff9f0a","#ffd60a"],
+  ["#5e5ce6","#64d2ff"],["#ff453a","#ff2d92"],["#30d158","#ffd60a"],["#0a84ff","#66d4cf"],["#bf5af2","#0a84ff"],["#ff2d92","#ff9f0a"],
+  ["#ac8e68","#ffd60a"],["#1d1d1f","#8e8e93"],["#8e8e93","#d1d1d6"],["#ffffff","#d1d1d6"]];
+const BGS={light:"#f5f5f7",dark:"#000000",none:"transparent"};
+const ny=new Date(Date.now()+365*864e5), p2=n=>String(n).padStart(2,"0");
+const S={card:0,grad:1,bg:"light",mode:"vence",titulo:"Cena",kicker:"Cupón para una",
+  texto:"En un restaurante o en casa. Tú decides, yo invito.",para:"Mi amor",
+  terms:"Este cupón es personal e intransferible. Avisa con al menos 48 horas de anticipación. Sujeto a disponibilidad y no canjeable por dinero. Válido para un solo uso.",
+  fecha:`${ny.getFullYear()}-${p2(ny.getMonth()+1)}-${p2(ny.getDate())}`,hora:"19:00"};
+
+/* ---------- editor ---------- */
+const G={};
+function mk(box,key,val,label,swatch){
+  const b=document.createElement("button"); b.type="button"; b._v=val;
+  if(swatch){b.className="sw";b.style.background=swatch;b.title=label;b.setAttribute("aria-label",label)} else b.textContent=label;
+  b.onclick=()=>{S[key]=val;render()}; (G[key]=G[key]||[]).push(b); $(box).appendChild(b);
+}
+CARDS.forEach((c,i)=>mk("cardSw","card",i,c[0],c[1]));
+GRADS.forEach((g,i)=>mk("gradSw","grad",i,"Degradado "+(i+1),`linear-gradient(135deg,${g[0]},${g[1]})`));
+[["light","Claro"],["dark","Oscuro"],["none","Transparente"]].forEach(o=>mk("bgSeg","bg",o[0],o[1]));
+[["vence","Fecha de vencimiento"],["valido","Válido"]].forEach(o=>mk("modeSeg","mode",o[0],o[1]));
+["titulo","kicker","texto","para","terms","fecha","hora"].forEach(k=>{
+  const el=$("f-"+k); el.value=S[k]; el.addEventListener("input",()=>{S[k]=el.value;render()});
+});
+
+/* ---------- render ---------- */
+const mq=matchMedia("(max-width:640px)");
+const dark=hex=>{const n=parseInt(hex.slice(1),16);return (.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255<=.6};
+const fmt=f=>{if(!f)return "";const [y,m,d]=f.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("es",{day:"numeric",month:"long",year:"numeric"})};
+const fmtH=h=>{if(!h)return "";const [a,b]=h.split(":").map(Number);return new Date(2000,0,1,a,b).toLocaleTimeString("es",{hour:"numeric",minute:"2-digit"})};
+function measure(){
+  const L=mq.matches?coupon.offsetWidth:coupon.offsetHeight, n=Math.max(1,Math.floor((L-24)/12));
+  coupon.style.setProperty("--pitch",((L-24)/n)+"px");
+  if(mq.matches) coupon.style.setProperty("--h",stub.offsetHeight+"px");
+}
+function render(){
+  const c=CARDS[S.card][1], g=GRADS[S.grad], d=dark(c), w=wrap.style;
+  w.setProperty("--card",c); w.setProperty("--text",d?"#ffffff":"#1d1d1f"); w.setProperty("--on",c);
+  w.setProperty("--muted",d?"rgba(255,255,255,.66)":"rgba(29,29,31,.62)");
+  w.setProperty("--a",g[0]); w.setProperty("--b",g[1]);
+  const bg=BGS[S.bg]; document.documentElement.style.background=bg; document.body.style.background=bg; stage.style.background=bg;
+  stage.style.setProperty("--hintc",S.bg==="dark"?"#a1a1a6":S.bg==="light"?"#6e6e73":"#8e8e93");
+  $("kicker").textContent=S.kicker; $("titulo").textContent=S.titulo||" "; $("texto").textContent=S.texto;
+  $("who").textContent=S.para?"Para "+S.para:""; $("who").hidden=!S.para;
+  $("terms").textContent=S.terms; $("terms").hidden=!S.terms;
+  $("dl").textContent=S.mode==="valido"?"Válido":"Fecha de vencimiento";
+  $("dv").textContent=fmt(S.fecha)||"Sin fecha"; $("dh").textContent=fmtH(S.hora); $("dh").hidden=!S.hora;
+  for(const k in G) G[k].forEach(b=>b.setAttribute("aria-pressed",b._v===S[k]));
+  measure();
+}
+try{ new QRCode($("qr"),{text:QR_URL,width:300,height:300,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+new ResizeObserver(measure).observe(coupon);
+
+$("create").onclick=()=>{stage.dataset.mode="coupon";scrollTo(0,0);measure()};
+$("edit").onclick=()=>{stage.dataset.mode="edit";scrollTo(0,0)};
+
+/* ---------- guardar PDF ---------- */
+function drawCoupon(withBg){
+  const W=770,mw=520,sw=W-mw,pad=44,m=withBg?48:4,sc=3,F='-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue","Segoe UI",Roboto,Arial,sans-serif';
+  const cv=document.createElement("canvas"),x=cv.getContext("2d");
+  const wrapT=(t,font,w)=>{x.font=font;const out=[];(t||"").split("\n").forEach(par=>{let l="";par.split(" ").forEach(wd=>{
+    const n=l?l+" "+wd:wd; if(x.measureText(n).width>w&&l){out.push(l);l=wd}else l=n});out.push(l)});return out};
+  const f2=`700 66px ${F}`,f3=`400 17px ${F}`,f5=`400 12.5px ${F}`,tw=mw-pad*2;
+  const tl=wrapT(S.titulo||" ",f2,tw),xl=wrapT(S.texto,f3,380),ml=S.terms?wrapT(S.terms,f5,mw-pad-22):[];
+  let y=pad; const ky=y+8; y+=34; const ty=y; y=ty+tl.length*80; const xy=y; y+=xl.length*25+14;
+  const py=y; if(S.para) y+=26; const my=y+6; y+=ml.length*18;
+  const H=Math.max(Math.ceil(y+pad-6),330);
+  cv.width=W*sc; cv.height=H*sc; x.scale(sc,sc);
+  const c=CARDS[S.card][1],g=GRADS[S.grad],d=dark(c),txt=d?"#fff":"#1d1d1f",mut=d?"rgba(255,255,255,.66)":"rgba(29,29,31,.62)";
+  x.fillStyle=c; x.beginPath(); x.roundRect(0,0,W,H,28); x.fill();
+  const kg=x.createLinearGradient(pad,ky-6,pad+11,ky+6); kg.addColorStop(0,g[0]); kg.addColorStop(1,g[1]);
+  x.fillStyle=kg; x.beginPath(); x.arc(pad+5.5,ky,5.5,0,7); x.fill();
+  x.font=`600 15px ${F}`; x.fillStyle=mut; x.fillText(S.kicker,pad+21,ky+5);
+  x.font=f2; const gw=Math.min(tw,Math.max(200,...tl.map(l=>x.measureText(l).width)));
+  const tg=x.createLinearGradient(pad,0,pad+gw,0); tg.addColorStop(0,g[0]); tg.addColorStop(1,g[1]);
+  x.fillStyle=tg; tl.forEach((l,i)=>x.fillText(l,pad,ty+58+i*80));
+  x.font=f3; x.fillStyle=mut; xl.forEach((l,i)=>x.fillText(l,pad,xy+17+i*25));
+  if(S.para){x.font=`600 16px ${F}`;x.fillStyle=txt;x.fillText("Para "+S.para,pad,py+14)}
+  x.font=f5; x.fillStyle=mut; ml.forEach((l,i)=>x.fillText(l,pad,my+12+i*18));
+  const cx=mw+sw/2, qc=document.querySelector("#qr canvas"), hh=fmtH(S.hora);
+  const th=150+20+13+27+(hh?22:0), by=(H-th)/2;
+  if(qc){ x.fillStyle="#fff"; x.beginPath(); x.roundRect(cx-75,by,150,150,16); x.fill(); x.drawImage(qc,cx-65,by+10,130,130); }
+  const dy=by+150+20+13; x.textAlign="center";
+  x.font=`400 13px ${F}`; x.fillStyle=mut; x.fillText(S.mode==="valido"?"Válido":"Fecha de vencimiento",cx,dy);
+  x.font=`600 18px ${F}`; x.fillStyle=txt; x.fillText(fmt(S.fecha)||"Sin fecha",cx,dy+25);
+  if(hh){x.font=`400 15px ${F}`;x.fillStyle=mut;x.fillText(hh,cx,dy+47)} x.textAlign="left";
+  x.globalCompositeOperation="destination-out"; x.fillStyle="#000";
+  const n=Math.max(1,Math.floor((H-24)/12)),pt=(H-24)/n;
+  [0,H].forEach(yy=>{x.beginPath();x.arc(mw,yy,12,0,7);x.fill()});
+  for(let k=0;k<n;k++){x.beginPath();x.arc(mw,12+pt/2+k*pt,3,0,7);x.fill()}
+  const out=document.createElement("canvas"); out.width=(W+m*2)*sc; out.height=(H+m*2)*sc; const o=out.getContext("2d");
+  if(withBg&&S.bg!=="none"){o.fillStyle=BGS[S.bg];o.fillRect(0,0,out.width,out.height)}
+  if(withBg){o.shadowColor="rgba(0,0,0,.22)";o.shadowBlur=40*sc;o.shadowOffsetY=16*sc}
+  o.drawImage(cv,m*sc,m*sc);
+  return {canvas:out,w:W+m*2,h:H+m*2};
+}
+$("save").onclick=async()=>{
+  const btn=$("save"), old="Guardar"; btn.textContent="Guardando…"; btn.disabled=true;
+  try{
+    const r=drawCoupon(true), {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:r.w>r.h?"l":"p",unit:"px",format:[r.w,r.h],hotfixes:["px_scaling"]});
+    pdf.addImage(r.canvas.toDataURL("image/png"),"PNG",0,0,r.w,r.h);
+    const buf=pdf.output("arraybuffer"), dl=window.claude?.use?await claude.use("downloads"):null;
+    if(dl) await dl.save({filename:"cupon.pdf",data:buf});
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/pdf"}));a.download="cupon.pdf";a.click()}
+    btn.textContent="Guardado";
+  }catch(e){ btn.textContent=e&&e.code==="declined"?old:"No se pudo guardar"; }
+  setTimeout(()=>{btn.textContent=old;btn.disabled=false},1800);
+};
+
+/* ---------- config.json para el cupón de canje ---------- */
+$("cfg").onclick=async()=>{
+  const btn=$("cfg"), old=btn.textContent;
+  const cfg={card:CARDS[S.card][1],grad:GRADS[S.grad],bg:S.bg,kicker:S.kicker,titulo:S.titulo,texto:S.texto,
+    para:S.para,terms:S.terms,mode:S.mode,fecha:S.fecha,hora:S.hora};
+  const txt=JSON.stringify(cfg,null,2);
+  try{
+    const dl=window.claude?.use?await claude.use("downloads"):null;
+    if(dl) await dl.save({filename:"config.json",data:txt});
+    else{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt],{type:"application/json"}));a.download="config.json";a.click()}
+    btn.textContent="Descargado";
+  }catch(e){ btn.textContent=e&&e.code==="declined"?old:"No se pudo descargar"; }
+  setTimeout(()=>btn.textContent=old,1800);
+};
+
+render();
+</script>
+</body>
+</html>
